@@ -214,9 +214,9 @@ const widget = TAURI ? (() => { const inv = TG.core.invoke; return {
   init: (x, y, w, h, pin) => inv('init_window', { x, y, width: w, height: h, pin }), forceShow: () => inv('force_show'),
   dragStart: () => inv('drag_start'), dragMove: () => inv('drag_move'), dragEnd: () => inv('drag_end'),
   setSize: (w, h, center) => inv('set_size', { width: w, height: h, center: !!center }),
-  setPin: (on) => inv('set_pin', { on: !!on }), setLogin: (on) => inv('set_autostart', { on: !!on }),
+  setPin: (on) => inv('set_pin', { on: !!on }), setShape: (kind, x, y, w, h, r, r2) => inv('set_shape', { kind, x, y, width: w, height: h, r, r2 }), setLogin: (on) => inv('set_autostart', { on: !!on }),
   openSettings: (ax, ay, aw, ah) => inv('open_settings', { ax, ay, aw, ah }), closeSettings: () => inv('close_settings'), resetPos: () => inv('reset_pos'), quit: () => inv('quit')
-}; })() : { init: NOP, forceShow: NOP, dragStart: NOP, dragMove: NOP, dragEnd: async () => null, setSize: NOP, setPin: NOP, setLogin: NOP, openSettings: NOP, closeSettings: NOP, resetPos: async () => null, quit: NOP };
+}; })() : { init: NOP, forceShow: NOP, dragStart: NOP, dragMove: NOP, dragEnd: async () => null, setSize: NOP, setPin: NOP, setShape: NOP, setLogin: NOP, openSettings: NOP, closeSettings: NOP, resetPos: async () => null, quit: NOP };
 
 /* ================= CONFIG: shapes, styles, themes (add yours here) ================= */
 const SHAPES = {
@@ -417,13 +417,23 @@ function commit(fn, refresh = true) {
   if (MODE === 'settings') { if (refresh) syncPanel(); return; }
   applyState(); if (refresh && panelOpen) syncPanel();
 }
+/* when stuck to the desktop the window is clipped to the card's exact shape (no white box around it) */
+const RAD = { square: 34, wide: 32, tall: 36 };
+function applyRegion() {
+  if (!TAURI || MODE !== 'main') return;
+  const sh = SHAPES[S.shape], d = window.devicePixelRatio || 1, k = S.scale * d, p = Math.round(PADOF(S.scale) * d);
+  const w = Math.round(sh.w * k), h = Math.round(sh.h * k);
+  let kind = 'rr', r = Math.round((RAD[S.shape] || 34) * k), r2 = r;
+  if (S.shape === 'circle') kind = 'ellipse'; else if (S.shape === 'pill') r = Math.round(h / 2); else if (S.shape === 'arch') { kind = 'arch'; r = Math.round(w / 2); r2 = Math.round(34 * k); }
+  widget.setShape(kind, p, p, w, h, r, r2);
+}
 function applyState() {
   applyTheme(); applyShape(); renderFront(); renderBack();
   if (prev) {
     if (prev.dayStyle !== S.dayStyle) card.classList.remove('flipped'); else if (prev.clockStyle !== S.clockStyle) card.classList.add('flipped');
     if (TAURI) {
-      if (prev.shape !== S.shape || prev.scale !== S.scale) { const z = winSize(); widget.setSize(z.w, z.h, true); }
-      if (prev.pin !== S.pin) widget.setPin(S.pin);
+      if (prev.shape !== S.shape || prev.scale !== S.scale) { const z = winSize(); widget.setSize(z.w, z.h, true); applyRegion(); }
+      if (prev.pin !== S.pin) widget.setPin(S.pin).then(applyRegion);
       if (prev.login !== S.login) widget.setLogin(S.login);
     }
   }
@@ -473,7 +483,7 @@ function openSettings() {
 
 /* corner grip: live resize (window follows the cursor), saved on release */
 let gd = null;
-function liveScale(s) { S.scale = s; if (prev) prev.scale = s; applyShape(); const z = winSize(); widget.setSize(z.w, z.h, false); }
+function liveScale(s) { S.scale = s; if (prev) prev.scale = s; applyShape(); const z = winSize(); widget.setSize(z.w, z.h, false); applyRegion(); }
 grip.addEventListener('pointerdown', (e) => {
   e.preventDefault(); e.stopPropagation(); grip.setPointerCapture(e.pointerId);
   const sh = SHAPES[S.shape], p = PADOF(S.scale);
@@ -564,7 +574,7 @@ async function bootMain() {
   document.body.className = TAURI ? 'app' : 'web';
   applyTheme(); applyShape(); renderFront(); renderBack();
   if (TAURI) {
-    try { const z = winSize(), p = loadPos(); savePos(await widget.init(p[0], p[1], z.w, z.h, S.pin)); }
+    try { const z = winSize(), p = loadPos(); savePos(await widget.init(p[0], p[1], z.w, z.h, S.pin)); applyRegion(); }
     catch (err) { try { await widget.forceShow(); } catch {} }
     if (TG.event) TG.event.listen('tray', (ev) => {
       if (ev.payload === 'open') openSettings();

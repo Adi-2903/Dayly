@@ -1,6 +1,6 @@
 [package]
 name = "dayly"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 authors = ["Aditya Jain"]
 description = "Dayly - desktop countdown widget"

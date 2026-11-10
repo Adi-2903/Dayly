@@ -31,7 +31,9 @@ fn es<E: ToString>(e: E) -> String {
 mod desk {
     use std::ptr::{null, null_mut};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, POINT, RECT};
-    use windows_sys::Win32::Graphics::Gdi::ScreenToClient;
+    use windows_sys::Win32::Graphics::Gdi::{
+        CombineRgn, CreateEllipticRgn, CreateRoundRectRgn, DeleteObject, ScreenToClient, SetWindowRgn, RGN_OR,
+    };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         EnumWindows, FindWindowExW, FindWindowW, GetParent, GetWindowLongPtrW, GetWindowRect,
         SetParent, SetWindowLongPtrW, SetWindowPos, GWL_STYLE, HWND_TOP, SWP_FRAMECHANGED,
@@ -118,6 +120,30 @@ mod desk {
         }
     }
 
+    /// Clip the window to the card's exact shape (so no white box shows around it). Region is in window pixels.
+    /// kind: "ellipse" | "arch" (top radius r, bottom radius r2) | anything else = rounded rect with radius r.
+    pub fn shape(h: isize, kind: &str, x: i32, y: i32, w: i32, hh: i32, r: i32, r2: i32, on: bool) {
+        unsafe {
+            let hwnd = h as HWND;
+            if !on {
+                SetWindowRgn(hwnd, null_mut(), 1);
+                return;
+            }
+            let rgn = match kind {
+                "ellipse" => CreateEllipticRgn(x, y, x + w, y + hh),
+                "arch" => {
+                    let a = CreateRoundRectRgn(x, y, x + w, y + hh, 2 * r, 2 * r);
+                    let b = CreateRoundRectRgn(x, y + hh / 2, x + w, y + hh, 2 * r2, 2 * r2);
+                    CombineRgn(a, a, b, RGN_OR);
+                    DeleteObject(b);
+                    a
+                }
+                _ => CreateRoundRectRgn(x, y, x + w, y + hh, 2 * r, 2 * r),
+            };
+            SetWindowRgn(hwnd, rgn, 1);
+        }
+    }
+
     /// Move a pinned (child) window to SCREEN coordinates x,y.
     pub fn move_child(h: isize, x: i32, y: i32) -> bool {
         unsafe {
@@ -159,6 +185,14 @@ fn os_unpin(w: &WebviewWindow) {
 fn os_move_child(w: &WebviewWindow, x: i32, y: i32) -> bool {
     raw_hwnd(w).map(|h| desk::move_child(h, x, y)).unwrap_or(false)
 }
+#[cfg(windows)]
+fn os_shape(w: &WebviewWindow, kind: &str, x: i32, y: i32, width: i32, height: i32, r: i32, r2: i32, on: bool) {
+    if let Some(h) = raw_hwnd(w) {
+        desk::shape(h, kind, x, y, width, height, r, r2, on);
+    }
+}
+#[cfg(not(windows))]
+fn os_shape(_w: &WebviewWindow, _kind: &str, _x: i32, _y: i32, _width: i32, _height: i32, _r: i32, _r2: i32, _on: bool) {}
 #[cfg(not(windows))]
 fn os_pin(_w: &WebviewWindow) -> bool {
     false
@@ -311,6 +345,13 @@ fn set_pin(w: WebviewWindow, on: bool) -> Result<bool, String> {
         PINNED.store(false, Ordering::Relaxed);
     }
     Ok(PINNED.load(Ordering::Relaxed))
+}
+
+/// Clip the (pinned) window to the card's shape; clears the clip when not pinned.
+#[tauri::command]
+fn set_shape(w: WebviewWindow, kind: String, x: i32, y: i32, width: i32, height: i32, r: i32, r2: i32) -> Result<(), String> {
+    os_shape(&w, &kind, x, y, width, height, r, r2, PINNED.load(Ordering::Relaxed));
+    Ok(())
 }
 
 #[tauri::command]
@@ -479,6 +520,7 @@ fn main() {
             drag_end,
             set_size,
             set_pin,
+            set_shape,
             reset_pos,
             set_autostart,
             quit,
