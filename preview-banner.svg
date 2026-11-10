@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 340" width="860" height="340" style="font-family:'Segoe UI',system-ui,sans-serif">
+  <defs>
+    <!-- midnight bg -->
+    <linearGradient id="gMid" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#161d3c"/><stop offset="100%" stop-color="#0a0e1f"/></linearGradient>
+    <!-- aurora bg -->
+    <radialGradient id="gAur1" cx="20%" cy="20%" r="60%"><stop offset="0%" stop-color="#7c3aed" stop-opacity=".65"/><stop offset="100%" stop-color="#0a1022" stop-opacity="0"/></radialGradient>
+    <radialGradient id="gAur2" cx="85%" cy="30%" r="60%"><stop offset="0%" stop-color="#06b6d4" stop-opacity=".55"/><stop offset="100%" stop-color="#0a1022" stop-opacity="0"/></radialGradient>
+    <!-- sunset bg -->
+    <linearGradient id="gSun" x1="0" y1="0" x2=".6" y2="1"><stop offset="0%" stop-color="#ff7e5f"/><stop offset="60%" stop-color="#b8325f"/><stop offset="100%" stop-color="#3b1f5e"/></linearGradient>
+    <!-- sakura bg -->
+    <linearGradient id="gSak" x1="0" y1="0" x2=".5" y2="1"><stop offset="0%" stop-color="#ffd9e6"/><stop offset="100%" stop-color="#ffb3cf"/></linearGradient>
+    <!-- synth bg -->
+    <linearGradient id="gSyn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a0b4d"/><stop offset="100%" stop-color="#10031f"/></linearGradient>
+    <!-- glow filters -->
+    <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="shadow"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity=".5"/></filter>
+    <clipPath id="sq"><rect width="160" height="160" rx="20"/></clipPath>
+    <clipPath id="wd"><rect width="220" height="110" rx="18"/></clipPath>
+    <clipPath id="ci"><circle cx="75" cy="75" r="75"/></clipPath>
+    <clipPath id="pi"><rect width="200" height="74" rx="37"/></clipPath>
+    <clipPath id="ar"><path d="M0,80 Q0,0 80,0 Q160,0 160,80 Q160,140 80,160 Q0,160 0,140Z"/></clipPath>
+  </defs>
+
+  <!-- overall bg -->
+  <rect width="860" height="340" fill="#0d1117"/>
+
+  <!-- ── CARD 1: Square / Midnight Dots / Ring ── -->
+  <g transform="translate(30,70)" filter="url(#shadow)">
+    <rect width="160" height="160" rx="20" fill="url(#gMid)"/>
+    <!-- dot grid -->
+    <rect width="160" height="160" rx="20" fill="none" clip-path="url(#sq)"/>
+    <!-- progress ring -->
+    <circle cx="80" cy="80" r="58" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5"/>
+    <circle cx="80" cy="80" r="58" fill="none" stroke="#7aa2ff" stroke-width="5" stroke-dasharray="364.4" stroke-dashoffset="100" stroke-linecap="round" transform="rotate(-90 80 80)" filter="url(#glow)"/>
+    <!-- number -->
+    <text x="80" y="88" text-anchor="middle" font-size="52" font-weight="700" fill="#f4f6ff" letter-spacing="-1">42</text>
+    <text x="80" y="108" text-anchor="middle" font-size="11" font-weight="600" fill="#7aa2ff" letter-spacing="3" text-transform="uppercase">DAYS</text>
+    <!-- title -->
+    <text x="80" y="28" text-anchor="middle" font-size="9" fill="#a9b3dd" letter-spacing="2">EXAM</text>
+    <!-- sub -->
+    <text x="80" y="150" text-anchor="middle" font-size="8" fill="#a9b3dd">12 Nov · 6 wk</text>
+    <!-- edge -->
+    <rect width="160" height="160" rx="20" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+  </g>
+
+  <!-- ── CARD 2: Wide / Aurora / Split ── -->
+  <g transform="translate(210,115)" filter="url(#shadow)">
+    <rect width="220" height="110" rx="18" fill="#0a1022"/>
+    <rect width="220" height="110" rx="18" fill="url(#gAur1)"/>
+    <rect width="220" height="110" rx="18" fill="url(#gAur2)"/>
+    <!-- split layout -->
+    <text x="68" y="72" text-anchor="middle" font-size="64" font-weight="800" fill="#f3fffb" letter-spacing="-2">7</text>
+    <text x="145" y="52" text-anchor="middle" font-size="13" font-weight="800" fill="#5eead4" letter-spacing="2">DAYS</text>
+    <text x="145" y="68" text-anchor="middle" font-size="13" font-weight="800" fill="#5eead4" letter-spacing="2">TO GO</text>
+    <text x="145" y="85" text-anchor="middle" font-size="9" fill="#b6e6dc" letter-spacing="1">BIRTHDAY</text>
+    <rect width="220" height="110" rx="18" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
+  </g>
+
+  <!-- ── CARD 3: Circle / Synth / Digital clock ── -->
+  <g transform="translate(450,70)" filter="url(#shadow)">
+    <circle cx="75" cy="75" r="75" fill="url(#gSyn)"/>
+    <!-- synth grid lines h -->
+    <line x1="0" y1="40" x2="150" y2="40" stroke="rgba(255,79,216,.22)" stroke-width="1"/>
+    <line x1="0" y1="58" x2="150" y2="58" stroke="rgba(255,79,216,.22)" stroke-width="1"/>
+    <line x1="0" y1="76" x2="150" y2="76" stroke="rgba(255,79,216,.22)" stroke-width="1"/>
+    <line x1="0" y1="94" x2="150" y2="94" stroke="rgba(255,79,216,.22)" stroke-width="1"/>
+    <line x1="0" y1="112" x2="150" y2="112" stroke="rgba(255,79,216,.22)" stroke-width="1"/>
+    <!-- time -->
+    <text x="75" y="85" text-anchor="middle" font-size="38" font-weight="600" fill="#fff0fb" letter-spacing="-1" filter="url(#glow)">10:42</text>
+    <text x="75" y="104" text-anchor="middle" font-size="10" font-weight="600" fill="#ff4fd8" letter-spacing="2">PM</text>
+    <text x="75" y="30" text-anchor="middle" font-size="8" fill="#e9a9e0" letter-spacing="1">3D TO TRIP</text>
+    <circle cx="75" cy="75" r="74" fill="none" stroke="rgba(255,79,216,.4)" stroke-width="1"/>
+  </g>
+
+  <!-- ── CARD 4: Pill / Sunset / Minimal ── -->
+  <g transform="translate(450,210)" filter="url(#shadow)">
+    <rect width="200" height="74" rx="37" fill="url(#gSun)"/>
+    <!-- stripes -->
+    <rect width="200" height="74" rx="37" fill="url(#gSun)" clip-path="url(#pi)"/>
+    <text x="66" y="46" text-anchor="middle" font-size="40" font-weight="800" fill="#fff7f0" letter-spacing="-1">15</text>
+    <text x="140" y="38" text-anchor="middle" font-size="10" font-weight="600" fill="#ffe08a" letter-spacing="2">DAYS</text>
+    <text x="140" y="54" text-anchor="middle" font-size="9" fill="#ffd9c7" letter-spacing="1">LAUNCH</text>
+    <rect width="200" height="74" rx="37" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="1"/>
+  </g>
+
+  <!-- ── CARD 5: Arch / Sakura / Dots ── -->
+  <g transform="translate(670,60)" filter="url(#shadow)">
+    <path d="M0,80 Q0,0 80,0 Q160,0 160,80 L160,170 Q160,180 150,180 L10,180 Q0,180 0,170Z" fill="url(#gSak)"/>
+    <!-- dots grid -->
+    <g fill="#e0457b" fill-opacity=".3">
+      <circle cx="42" cy="110" r="5"/><circle cx="58" cy="110" r="5"/><circle cx="74" cy="110" r="5"/>
+      <circle cx="90" cy="110" r="5"/><circle cx="106" cy="110" r="5"/><circle cx="118" cy="110" r="5"/>
+      <circle cx="42" cy="126" r="5"/><circle cx="58" cy="126" r="5"/><circle cx="74" cy="126" r="5"/>
+      <circle cx="90" cy="126" r="5"/>
+    </g>
+    <g fill="#e0457b">
+      <circle cx="42" cy="110" r="5" fill-opacity="1"/><circle cx="58" cy="110" r="5" fill-opacity="1"/>
+      <circle cx="74" cy="110" r="5" fill-opacity="1"/><circle cx="90" cy="110" r="5" fill-opacity="1"/>
+      <circle cx="106" cy="110" r="5" fill-opacity=".3"/><circle cx="118" cy="110" r="5" fill-opacity=".3"/>
+    </g>
+    <!-- number -->
+    <text x="80" y="80" text-anchor="middle" font-size="40" font-weight="800" fill="#5a2a3a" letter-spacing="-1">24</text>
+    <text x="80" y="97" text-anchor="middle" font-size="10" font-weight="700" fill="#e0457b" letter-spacing="2">DAYS</text>
+    <text x="80" y="26" text-anchor="middle" font-size="8" fill="#a8647c" letter-spacing="2">WEDDING</text>
+    <path d="M0,80 Q0,0 80,0 Q160,0 160,80 L160,170 Q160,180 150,180 L10,180 Q0,180 0,170Z" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1"/>
+  </g>
+
+  <!-- ── labels at bottom ── -->
+  <text x="110" y="260" text-anchor="middle" font-size="10" fill="#6e7681" letter-spacing="1">Ring · Midnight</text>
+  <text x="320" y="260" text-anchor="middle" font-size="10" fill="#6e7681" letter-spacing="1">Split · Aurora</text>
+  <text x="525" y="260" text-anchor="middle" font-size="10" fill="#6e7681" letter-spacing="1">Clock · Synthwave</text>
+  <text x="525" y="310" text-anchor="middle" font-size="10" fill="#6e7681" letter-spacing="1">Pill · Sunset</text>
+  <text x="750" y="275" text-anchor="middle" font-size="10" fill="#6e7681" letter-spacing="1">Dots · Sakura</text>
+
+  <!-- ── top label ── -->
+  <text x="430" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="#f0f6fc" letter-spacing="4">DAYLY</text>
+  <text x="430" y="56" text-anchor="middle" font-size="10" fill="#6e7681" letter-spacing="2">desktop countdown widget · 6 shapes · 20 themes</text>
+</svg>
