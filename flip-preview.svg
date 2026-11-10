@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 320" width="300" height="320">
+  <defs>
+    <style>
+      .front-g {
+        animation: frontFlip 5s ease-in-out infinite;
+        transform-origin: 150px 150px;
+        transform-box: fill-box;
+      }
+      .back-g {
+        animation: backFlip 5s ease-in-out infinite;
+        transform-origin: 150px 150px;
+        transform-box: fill-box;
+      }
+      @keyframes frontFlip {
+        0%   { transform: scaleX(1);  opacity: 1; }
+        32%  { transform: scaleX(1);  opacity: 1; }
+        40%  { transform: scaleX(0);  opacity: 0; }
+        60%  { transform: scaleX(0);  opacity: 0; }
+        90%  { transform: scaleX(0);  opacity: 0; }
+        98%  { transform: scaleX(1);  opacity: 1; }
+        100% { transform: scaleX(1);  opacity: 1; }
+      }
+      @keyframes backFlip {
+        0%   { transform: scaleX(0);  opacity: 0; }
+        40%  { transform: scaleX(0);  opacity: 0; }
+        48%  { transform: scaleX(1);  opacity: 1; }
+        82%  { transform: scaleX(1);  opacity: 1; }
+        90%  { transform: scaleX(0);  opacity: 0; }
+        100% { transform: scaleX(0);  opacity: 0; }
+      }
+
+      /* hint label pulse */
+      .hint { animation: hintFade 5s ease-in-out infinite; }
+      .hint2 { animation: hintFade2 5s ease-in-out infinite; }
+      @keyframes hintFade {
+        0%,30%  { opacity: 1; }
+        40%,90% { opacity: 0; }
+        98%,100%{ opacity: 1; }
+      }
+      @keyframes hintFade2 {
+        0%,40%  { opacity: 0; }
+        48%,82% { opacity: 1; }
+        90%,100%{ opacity: 0; }
+      }
+    </style>
+
+    <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#161d3c"/>
+      <stop offset="100%" stop-color="#0a0e1f"/>
+    </linearGradient>
+
+    <!-- shine overlay -->
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.17)"/>
+      <stop offset="46%" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+  </defs>
+
+  <!-- ── FRONT FACE: Countdown ── -->
+  <g class="front-g" filter="url(#shadow)">
+    <!-- card bg -->
+    <rect x="30" y="30" width="240" height="240" rx="30" fill="url(#bg1)"/>
+    <!-- dot grid -->
+    <rect x="30" y="30" width="240" height="240" rx="30"
+      fill="url(#bg1)" opacity=".0"/>
+
+    <!-- progress ring track -->
+    <circle cx="150" cy="150" r="88" fill="none"
+      stroke="rgba(255,255,255,.12)" stroke-width="7"/>
+    <!-- progress ring fill ~65% -->
+    <circle cx="150" cy="150" r="88" fill="none"
+      stroke="#7aa2ff" stroke-width="7"
+      stroke-dasharray="553" stroke-dashoffset="194"
+      stroke-linecap="round"
+      transform="rotate(-90 150 150)"
+      filter="url(#glow)"/>
+
+    <!-- big number -->
+    <text x="150" y="163" text-anchor="middle"
+      font-family="'Segoe UI',system-ui,sans-serif"
+      font-size="72" font-weight="700" fill="#f4f6ff"
+      letter-spacing="-2">42</text>
+
+    <!-- unit -->
+    <text x="150" y="188" text-anchor="middle"
+      font-family="'Segoe UI',system-ui,sans-serif"
+      font-size="13" font-weight="600" fill="#7aa2ff"
+      letter-spacing="4">DAYS</text>
+
+    <!-- top label -->
+    <text x="150" y="62" text-anchor="middle"
+      font-family="'Segoe UI',system-ui,sans-serif"
+      font-size="11" fill="#a9b3dd" letter-spacing="3">BIRTHDAY</text>
+
+    <!-- bottom date -->
+    <text x="150" y="253" text-anchor="middle"
+      font-family="'Segoe UI',system-ui,sans-serif"
+      font-size="10" fill="#a9b3dd">21 Dec · 6 wk</text>
+
+    <!-- shine -->
+    <rect x="30" y="30" width="240" height="240" rx="30" fill="url(#shine)"/>
+    <!-- edge -->
+    <rect x="30" y="30" width="240" height="240" rx="30"
+      fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+  </g>
+
+  <!-- ── BACK FACE: Clock ── -->
+  <g class="back-g" filter="url(#shadow)">
+    <!-- card bg -->
+    <rect x="30" y="30" width="240" height="240" rx="30" fill="url(#bg1)"/>
+
+    <!-- clock time -->
+    <text x="150" y="162" text-anchor="middle"
+      font-family="'Segoe UI',system-ui,sans-serif"
+      font-size="62" font-weight="600" fill="#f4f6ff"
+      letter-spacing="-2" filter="url(#glow)">10:42</text>
+
+    <!-- AM/PM -->
+    <text x="150" y="186" text-anchor="middle"
+      font-family="'Segoe UI',system-ui,sans-serif"
+      font-size="14" font-weight="500" fill="#7aa2ff"
+      letter-spacing="3">PM</text>
+
+    <!-- weekday + date -->
+    <text x="150" y="210" text-anchor="middle"
+      font-family="'Segoe UI',system-ui,sans-serif"
+      font-size="11" fill="#a9b3dd" letter-spacing="2">MONDAY, 10 NOV</text>
+
+    <!-- top event sub -->
+    <text x="150" y="62" text-anchor="middle"
+      font-family="'Segoe UI',system-ui,sans-serif"
+      font-size="11" fill="#a9b3dd" letter-spacing="2">42D TO BIRTHDAY</text>
+
+    <!-- shine -->
+    <rect x="30" y="30" width="240" height="240" rx="30" fill="url(#shine)"/>
+    <!-- edge -->
+    <rect x="30" y="30" width="240" height="240" rx="30"
+      fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+  </g>
+
+  <!-- ── hint labels ── -->
+  <text class="hint" x="150" y="295" text-anchor="middle"
+    font-family="'Segoe UI',system-ui,sans-serif"
+    font-size="11" fill="#6e7681" letter-spacing="1">↑ countdown</text>
+  <text class="hint2" x="150" y="295" text-anchor="middle"
+    font-family="'Segoe UI',system-ui,sans-serif"
+    font-size="11" fill="#7aa2ff" letter-spacing="1">↑ flip → clock</text>
+</svg>

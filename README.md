@@ -2,7 +2,15 @@
 
 ![Dayly preview](preview-banner.svg)
 
-A tiny desktop widget that counts down to the days that matter — birthdays, exams, trips, deadlines, whatever. Flip it to see the time. Sits quietly on your desktop, never in your taskbar.
+A desktop widget that shows your **countdown** and flips to reveal a **live clock** — tap it to switch between the two. Sits quietly on your desktop, never in your taskbar.
+
+<div align="center">
+
+![Flip preview](flip-preview.svg)
+
+*Click the widget anytime to flip between countdown ↔ clock*
+
+</div>
 
 ---
 
@@ -33,7 +41,7 @@ Unzip and run the Setup `.exe`. No admin needed.
 
 **12 Countdown styles** — Ring, Dots, Flip cards, Ticket, Stamp, Poster, Bar, D·H·M·S, and more
 
-**5 Clock styles** — Digital, Analog, Flip, Stacked, Rings
+**5 Clock styles** — Digital, Analog, Flip, Stacked, Rings · supports 12h and 24h
 
 **20 Themes** — Midnight, Aurora, Sakura, Synthwave, Terminal, Sunset, Paper, Ocean, Ember, and more
 
