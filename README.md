@@ -46,4 +46,14 @@ Toggle from the tray icon near the clock.
 
 ---
 
+## Built with
+
+**Frontend** — HTML · CSS · Vanilla JS (single file, no framework)
+
+**Backend** — Rust · [Tauri v2](https://tauri.app) · Windows API (`SetWindowRgn`, `SetParent`) for desktop pinning and shape clipping
+
+**Build** — GitHub Actions → NSIS installer
+
+---
+
 *Made by [Aditya Jain](https://github.com/Adi-2903)*
