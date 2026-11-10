@@ -1,0 +1,589 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Dayly</title>
+<style>
+  * { box-sizing: border-box; margin: 0; user-select: none; -webkit-user-select: none; }
+  html, body { width: 100%; height: 100%; background: transparent; overflow: hidden;
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+  #root { width: 100%; height: 100%; }
+  #scene { position: relative; flex: none; perspective: 1100px; }
+  body.app #root { position: relative; } body.app #scene { position: absolute; left: var(--pad); top: var(--pad); } body.app #panel { display: none !important; }
+  body.web #root { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 24px; }
+  body.smode #root { padding: 12px; } body.smode #scene { display: none; }
+  body.smode #panel { display: flex; width: 100%; height: 100%; max-height: none; }
+  #card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+    transition: transform .7s cubic-bezier(.2,.8,.2,1); }
+  #card.flipped { transform: rotateY(180deg); }
+
+  .face { position: absolute; inset: 0; overflow: hidden; border-radius: var(--r);
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    background: var(--bg); color: var(--fg); font-family: var(--font);
+    box-shadow: 0 6px 16px rgba(0,0,0,.40), inset 0 0 0 1px var(--edge);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .back { transform: rotateY(180deg); }
+  .face::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 46%;
+    background: linear-gradient(180deg, rgba(255,255,255,.17), rgba(255,255,255,0)); pointer-events: none; }
+
+  /* title / sub */
+  .meta { display: contents; }
+  .title { position: absolute; top: calc(var(--u)*24px); left: 0; right: 0; text-align: center; padding: 0 14%;
+    font-size: clamp(calc(var(--u)*13px), calc(9px / var(--z)), calc(var(--u)*20px)); letter-spacing: .22em; text-transform: uppercase; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub { position: absolute; bottom: calc(var(--u)*22px); left: 0; right: 0; text-align: center; padding: 0 12%;
+    font-size: clamp(calc(var(--u)*12px), calc(9px / var(--z)), calc(var(--u)*18px)); color: var(--muted); letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .s-circle .title { top: 14%; } .s-circle .sub { bottom: 14%; }
+  .s-arch .title { top: 17%; } .s-arch .sub { bottom: 8%; }
+  .s-tall .title { top: calc(var(--u)*30px); }
+  .pager { position: absolute; bottom: calc(var(--u)*8px); left: 0; right: 0; display: flex; justify-content: center; gap: 5px; z-index: 3; }
+  .s-circle .pager { bottom: 7%; } .s-pill .pager { display: none; }
+  .pager i { width: 6px; height: 6px; border-radius: 50%; background: var(--track); cursor: pointer; }
+  .pager i.on { background: var(--accent); }
+
+  /* pill = row layout */
+  .face.s-pill { flex-direction: row; gap: calc(var(--u)*26px); }
+  .s-pill .meta { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; order: 2; max-width: 38%; }
+  .s-pill .title, .s-pill .sub { position: static; padding: 0; text-align: left; }
+  .s-pill .body { order: 1; }
+
+  /* numbers */
+  .body { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 1; }
+  .s-pill .body { flex-direction: row; gap: 10px; align-items: baseline; }
+  .num { font-size: calc(var(--u)*84px); font-weight: 700; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 14px var(--glow); }
+  .num.sm { font-size: calc(var(--u)*62px); } .num.em { font-size: calc(var(--u)*70px); }
+  .num.xl { font-size: calc(var(--u)*128px); letter-spacing: -.05em; font-weight: 800; }
+  .num.md { font-size: calc(var(--u)*58px); }
+  .num.lg { font-size: calc(var(--u)*92px); font-weight: 600; }
+  .unit { margin-top: calc(var(--u)*6px); font-size: clamp(calc(var(--u)*14px), calc(9px / var(--z)), calc(var(--u)*21px)); letter-spacing: .3em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  .s-pill .unit { margin: 0; }
+  .row1 { display: flex; align-items: baseline; gap: calc(var(--u)*10px); }
+  .row1 .unit { margin: 0; }
+
+  .ring { position: absolute; width: calc(var(--m)*.7); height: calc(var(--m)*.7); top: 50%; left: 50%; transform: translate(-50%,-50%); }
+  .ring circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+  .ring .track { stroke: var(--track); } .ring .prog { stroke: var(--accent); }
+
+  /* flip digits */
+  .fl { display: flex; gap: calc(var(--u)*8px); align-items: center; }
+  .fd { font-style: normal; font-weight: 700; display: grid; place-items: center; position: relative;
+    width: calc(var(--u)*58px); height: calc(var(--u)*84px); font-size: calc(var(--u)*66px); font-variant-numeric: tabular-nums;
+    border-radius: calc(var(--u)*12px); background: linear-gradient(180deg, var(--box) 0 50%, var(--box2) 50% 100%);
+    box-shadow: inset 0 0 0 1px var(--edge), 0 4px 10px rgba(0,0,0,.22); }
+  .fd::after { content: ""; position: absolute; left: 0; right: 0; top: calc(50% - 1px); height: 2px; background: var(--line); }
+  .fl .colon { font-size: calc(var(--u)*44px); font-weight: 700; color: var(--accent); }
+  .fl small { font-size: calc(var(--u)*16px); color: var(--accent); font-weight: 600; margin-left: 2px; }
+
+  /* dots */
+  .dg { display: grid; gap: calc(var(--u)*5px); margin-top: calc(var(--u)*8px); }
+  .dg i { aspect-ratio: 1; border-radius: 50%; background: var(--track); }
+  .dg i.on { background: var(--accent); box-shadow: 0 0 8px var(--glow); }
+  .dg i.now { background: var(--fg); animation: pulse 1.6s ease-in-out 3; }
+  @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: .6; } }
+
+  /* bar */
+  .seg { display: flex; gap: calc(var(--u)*4px); width: calc(var(--w)*.7); margin-top: calc(var(--u)*12px); }
+  .seg i { flex: 1; height: calc(var(--u)*12px); border-radius: 99px; background: var(--track); }
+  .seg i.on { background: var(--accent); box-shadow: 0 0 8px var(--glow); }
+  .live { white-space: nowrap; margin-top: calc(var(--u)*10px); font-size: clamp(calc(var(--u)*15px), calc(10px / var(--z)), calc(var(--u)*22px)); font-variant-numeric: tabular-nums; color: var(--muted); letter-spacing: .06em; }
+
+  /* detail */
+  .dxs { display: flex; gap: calc(var(--u)*8px); }
+  .dx { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u)*6px); }
+  .dx b { display: grid; place-items: center; width: calc(var(--u)*56px); height: calc(var(--u)*66px); font-size: calc(var(--u)*34px); font-weight: 700;
+    border-radius: calc(var(--u)*12px); background: var(--box); box-shadow: inset 0 0 0 1px var(--edge); font-variant-numeric: tabular-nums; }
+  .dx span { font-size: clamp(calc(var(--u)*10px), calc(8px / var(--z)), calc(var(--u)*15px)); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  .dxs + .unit { margin-top: calc(var(--u)*12px); }
+
+  /* sentence */
+  .sn { font-family: Georgia, "Cambria", serif; text-align: center; line-height: 1.05; }
+  .sn .sl { font-size: calc(var(--u)*17px); font-style: italic; color: var(--muted); }
+  .sn .sw { font-size: calc(var(--u)*24px); font-style: italic; color: var(--accent); margin-bottom: calc(var(--u)*4px); }
+  .sn .st { font-size: calc(var(--u)*30px); font-weight: 700; max-width: calc(var(--w)*.82); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* "N days to go" styles */
+  .chipT { margin-top: calc(var(--u)*12px); max-width: 86%; padding: calc(var(--u)*5px) calc(var(--u)*16px); border-radius: 99px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+    font-size: clamp(calc(var(--u)*13px), calc(9px / var(--z)), calc(var(--u)*20px)); }
+  .sp { flex-direction: row; gap: calc(var(--u)*14px); max-width: 92%; }
+  .sp .num.xl { font-size: calc(var(--u)*112px); } .sp .num.xl.md { font-size: calc(var(--u)*70px); }
+  .spR { display: flex; flex-direction: column; gap: calc(var(--u)*8px); align-items: flex-start; min-width: 0; }
+  .spA { font-weight: 800; line-height: 1.05; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-size: clamp(calc(var(--u)*17px), calc(10px / var(--z)), calc(var(--u)*26px)); }
+  .spT { max-width: calc(var(--w)*.34); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-size: clamp(calc(var(--u)*12px), calc(9px / var(--z)), calc(var(--u)*18px)); }
+  .tk { width: 100%; } .tkT { max-width: 84%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: calc(var(--u)*30px); text-shadow: 0 2px 14px var(--glow); }
+  .tkLine { width: 76%; margin: calc(var(--u)*14px) 0; border-top: 2px dashed var(--track); position: relative; }
+  .tkLine::before, .tkLine::after { content: ""; position: absolute; top: calc(var(--u)*-9px); width: calc(var(--u)*16px); height: calc(var(--u)*16px); border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 1px var(--edge); }
+  .tkLine::before { left: calc(var(--u)*-48px); } .tkLine::after { right: calc(var(--u)*-48px); }
+  .stamp { border: calc(var(--u)*4px) solid var(--accent); border-radius: calc(var(--u)*16px); padding: calc(var(--u)*10px) calc(var(--u)*22px); transform: rotate(-6deg); text-align: center; max-width: calc(var(--w)*.8);
+    box-shadow: 0 0 0 calc(var(--u)*2px) color-mix(in srgb, var(--accent) 35%, transparent), 0 0 18px var(--glow); }
+  .stT { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; letter-spacing: .24em; text-transform: uppercase; color: var(--accent); font-size: calc(var(--u)*17px); }
+  .stN { font-size: calc(var(--u)*88px); font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 14px var(--glow); }
+  .stU { font-weight: 700; letter-spacing: .26em; text-transform: uppercase; color: var(--accent); font-size: calc(var(--u)*14px); }
+  .ps { position: relative; }
+  .num.ghost { font-size: calc(var(--u)*150px); font-weight: 900; line-height: .95; color: transparent; -webkit-text-stroke: calc(var(--u)*3px) var(--accent); text-shadow: 0 0 22px var(--glow); letter-spacing: -.04em; }
+  .s-wide .num.ghost { font-size: calc(var(--u)*112px); } .s-wide .num.ghost.md { font-size: calc(var(--u)*80px); } .s-wide .psU { margin-top: calc(var(--u)*-2px); }
+  .num.ghost.md { font-size: calc(var(--u)*100px); } .num.ghost.em { font-size: calc(var(--u)*90px); }
+  .psU { margin-top: calc(var(--u)*-6px); font-weight: 800; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); font-size: clamp(calc(var(--u)*15px), calc(9px / var(--z)), calc(var(--u)*22px)); }
+  .psT { margin-top: calc(var(--u)*6px); max-width: calc(var(--w)*.8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; font-size: clamp(calc(var(--u)*17px), calc(9px / var(--z)), calc(var(--u)*24px)); }
+
+  /* clocks */
+  .time { font-size: calc(var(--u)*64px); font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 14px var(--glow); white-space: nowrap; }
+  .time small { font-size: calc(var(--u)*22px); font-weight: 500; color: var(--accent); margin-left: 4px; }
+  .date { margin-top: calc(var(--u)*8px); font-size: clamp(calc(var(--u)*14px), calc(9px / var(--z)), calc(var(--u)*21px)); color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
+  .stk { display: flex; flex-direction: column; align-items: center; font-size: calc(var(--u)*100px); font-weight: 800; line-height: .84; letter-spacing: -.04em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 16px var(--glow); }
+  .stk span:last-child { color: var(--accent); }
+  .s-wide .stk, .s-pill .stk { flex-direction: row; gap: .1em; font-size: calc(var(--u)*120px); }
+  .analog { width: calc(var(--m)*.64); height: calc(var(--m)*.64); margin-top: calc(var(--u)*-8px); }
+  .s-circle .analog { width: calc(var(--m)*.58); height: calc(var(--m)*.58); margin-top: 0; }
+  .s-wide .analog { width: calc(var(--m)*.8); height: calc(var(--m)*.8); }
+  .analog .rim { fill: var(--box); stroke: var(--edge); stroke-width: 2; }
+  .analog .tk { stroke: var(--muted); stroke-width: 1.2; } .analog .tk.b { stroke: var(--fg); stroke-width: 2.6; }
+  .analog .hh { stroke: var(--fg); stroke-width: 5.5; stroke-linecap: round; }
+  .analog .mh { stroke: var(--fg); stroke-width: 3.6; stroke-linecap: round; }
+  .analog .sh { stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; }
+  .analog .cd { fill: var(--accent); }
+  .arcs { width: calc(var(--m)*.8); height: calc(var(--m)*.8); }
+  .arcs circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+  .arcs .t { stroke: var(--track); }
+  .arcs text { fill: var(--fg); font-family: inherit; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  #gear { position: absolute; top: calc(8px / var(--z)); right: calc(8px / var(--z)); z-index: 6; width: calc(26px / var(--z)); height: calc(26px / var(--z)); border-radius: 50%;
+    display: grid; place-items: center; font-size: calc(15px / var(--z)); color: #fff; opacity: 0; cursor: pointer; background: rgba(0,0,0,.35); transition: opacity .2s; }
+  #grip { position: absolute; right: calc(8px / var(--z)); bottom: calc(8px / var(--z)); width: calc(22px / var(--z)); height: calc(22px / var(--z)); z-index: 7; cursor: nwse-resize; opacity: 0; transition: opacity .15s; touch-action: none;
+    background: linear-gradient(135deg, transparent 0 46%, rgba(255,255,255,.85) 46% 55%, transparent 55% 68%, rgba(255,255,255,.85) 68% 77%, transparent 77%); }
+  #scene:hover #grip { opacity: .75; } #grip:hover { opacity: 1 !important; }
+  #scene.sh-circle #grip { right: 17%; bottom: 17%; } #scene.sh-circle #gear { right: 17%; top: 10%; }
+  #scene.sh-arch #grip { right: calc(14px / var(--z)); bottom: calc(14px / var(--z)); }
+  #scene.sh-pill #grip { right: calc(22px / var(--z)); bottom: calc(10px / var(--z)); width: calc(16px / var(--z)); height: calc(16px / var(--z)); }
+  input[type=range] { width: 100%; accent-color: #7aa2ff; }
+  #scene:hover #gear { opacity: .85; } #gear:hover { opacity: 1 !important; background: rgba(0,0,0,.55); }
+
+  /* settings panel */
+  #panel { display: none; flex: none; width: 340px; max-height: 532px; overflow: hidden; flex-direction: column; gap: 8px;
+    background: rgba(14,16,28,.97); color: #eef0ff; border-radius: 22px; padding: 14px 8px 14px 16px; font: 12px "Segoe UI", system-ui, sans-serif;
+    box-shadow: 0 12px 30px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.12); }
+  #panel.open { display: flex; }
+  .ph { padding-right: 8px; } .pb { padding-right: 8px; flex: none; }
+  .pbody { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 8px; margin: 2px 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.22) transparent; }
+  .pbody::-webkit-scrollbar { width: 5px; } .pbody::-webkit-scrollbar-track { background: transparent; }
+  .pbody::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 9px; } .pbody::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.35); }
+  .ph { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+  .ph .x { cursor: pointer; opacity: .6; } .ph .x:hover { opacity: 1; }
+  .sec { margin-top: 6px; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #9aa0c4; }
+  .sec small { text-transform: none; letter-spacing: 0; opacity: .8; }
+  .ev { display: flex; gap: 6px; align-items: center; padding: 5px; border-radius: 10px; border: 1px solid transparent; }
+  .ev.sel { background: rgba(122,162,255,.14); border-color: rgba(122,162,255,.45); }
+  .ev input[type=text], .ev input[type=date] { min-width: 0; padding: 5px 7px; border-radius: 8px; border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.07); color: #fff; font: inherit; outline: none; color-scheme: dark; }
+  .ev .t { flex: 1.2; } .ev .d { flex: 1; }
+  .ev .del { cursor: pointer; opacity: .5; padding: 0 3px; } .ev .del:hover { opacity: 1; color: #ff8a8a; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 5px 10px; border-radius: 99px; background: rgba(255,255,255,.08); cursor: pointer; border: 1px solid transparent; }
+  .chip:hover { background: rgba(255,255,255,.15); } .chip.sel { background: rgba(122,162,255,.25); border-color: #7aa2ff; }
+  .chip.add { background: transparent; border: 1px dashed rgba(255,255,255,.25); }
+  .tg { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; }
+  .sw2 { aspect-ratio: 1; border-radius: 10px; cursor: pointer; border: 2px solid transparent; box-shadow: 0 0 0 1px rgba(255,255,255,.2); }
+  .sw2.sel { border-color: #fff; }
+  .tog { display: flex; flex-wrap: wrap; gap: 4px 14px; color: #c9cdee; margin-top: 4px; }
+  .tog label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  .pb { display: flex; gap: 8px; margin-top: 6px; }
+  .pb button { flex: 1; padding: 8px; border-radius: 10px; border: 0; font: inherit; cursor: pointer; color: #fff; background: rgba(255,255,255,.12); }
+  .pb .primary { background: #5b7cff; } .pb .danger { background: rgba(255,90,90,.25); }
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="scene">
+    <div id="gear" title="Settings">⚙</div>
+    <div id="grip" title="Drag to resize"></div>
+    <div id="card">
+      <div class="face front" id="front"></div>
+      <div class="face back" id="back"></div>
+    </div>
+  </div>
+  <div id="panel"></div>
+</div>
+
+<script>
+/* ================= WINDOW BRIDGE (Tauri app) / no-op stubs (browser preview) =================
+   MODE 'main' = the widget window, 'settings' = the small settings window, no Tauri = preview in a browser. */
+const TG = window.__TAURI__, TAURI = !!(TG && TG.core);
+const MODE = (() => { try { const l = window.__TAURI_INTERNALS__.metadata.currentWindow.label; if (l) return l === 'settings' ? 'settings' : 'main'; } catch {} return location.hash === '#settings' ? 'settings' : 'main'; })();
+const NOP = async () => {};
+const widget = TAURI ? (() => { const inv = TG.core.invoke; return {
+  init: (x, y, w, h, pin) => inv('init_window', { x, y, width: w, height: h, pin }), forceShow: () => inv('force_show'),
+  dragStart: () => inv('drag_start'), dragMove: () => inv('drag_move'), dragEnd: () => inv('drag_end'),
+  setSize: (w, h, center) => inv('set_size', { width: w, height: h, center: !!center }),
+  setPin: (on) => inv('set_pin', { on: !!on }), setLogin: (on) => inv('set_autostart', { on: !!on }),
+  openSettings: (ax, ay, aw, ah) => inv('open_settings', { ax, ay, aw, ah }), closeSettings: () => inv('close_settings'), resetPos: () => inv('reset_pos'), quit: () => inv('quit')
+}; })() : { init: NOP, forceShow: NOP, dragStart: NOP, dragMove: NOP, dragEnd: async () => null, setSize: NOP, setPin: NOP, setLogin: NOP, openSettings: NOP, closeSettings: NOP, resetPos: async () => null, quit: NOP };
+
+/* ================= CONFIG: shapes, styles, themes (add yours here) ================= */
+const SHAPES = {
+  square: { n: 'Square', w: 280, h: 280, u: 1,   r: '34px' },
+  wide:   { n: 'Wide',   w: 420, h: 200, u: .8,  r: '32px' },
+  tall:   { n: 'Tall',   w: 200, h: 300, u: .72, r: '36px' },
+  circle: { n: 'Circle', w: 270, h: 270, u: .94, r: '50%' },
+  arch:   { n: 'Arch',   w: 240, h: 300, u: .88, r: '120px 120px 34px 34px' },
+  pill:   { n: 'Pill',   w: 320, h: 120, u: .6,  r: '60px' }
+};
+const DAYSTYLES = { ring: 'Ring', togo: '5 days to go', split: 'Split', ticket: 'Ticket', stamp: 'Stamp', poster: 'Poster', flip: 'Flip cards', minimal: 'Minimal', dots: 'Dots', bar: 'Bar', detail: 'D·H·M·S', sentence: 'Sentence' };
+const CLOCKS = { digital: 'Digital', analog: 'Analog', flip: 'Flip', stacked: 'Stacked', arcs: 'Rings' };
+const F = {
+  sans: '"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif',
+  serif: 'Georgia,Cambria,"Times New Roman",serif',
+  mono: '"Cascadia Mono",Consolas,"Courier New",monospace',
+  round: '"Trebuchet MS","Segoe UI",sans-serif',
+  cond: 'Bahnschrift,"Segoe UI",sans-serif'
+};
+const THEMES = {
+  midnight: { n: 'Midnight Dots', font: 'sans', fg: '#f4f6ff', muted: '#a9b3dd', accent: '#7aa2ff', glow: 'rgba(122,162,255,.45)', track: 'rgba(255,255,255,.12)', edge: 'rgba(255,255,255,.14)',
+    bg: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,.13) 1.2px, transparent 1.7px) 0 0/18px 18px, linear-gradient(145deg,#161d3c,#0a0e1f)' },
+  aurora: { n: 'Aurora', font: 'sans', fg: '#f3fffb', muted: '#b6e6dc', accent: '#5eead4', glow: 'rgba(94,234,212,.5)', track: 'rgba(255,255,255,.14)', edge: 'rgba(255,255,255,.18)',
+    bg: 'radial-gradient(60% 50% at 18% 18%, rgba(124,58,237,.65), transparent), radial-gradient(60% 60% at 88% 30%, rgba(6,182,212,.55), transparent), radial-gradient(70% 60% at 50% 105%, rgba(34,197,94,.45), transparent), #0a1022' },
+  aero: { n: 'Aero Glass (Win7)', font: 'sans', fg: '#ffffff', muted: 'rgba(255,255,255,.82)', accent: '#c5eaff', glow: 'rgba(120,200,255,.8)', track: 'rgba(255,255,255,.28)', edge: 'rgba(255,255,255,.6)',
+    bg: 'linear-gradient(155deg, rgba(255,255,255,.46) 0%, rgba(140,195,255,.30) 38%, rgba(40,100,200,.44) 100%)' },
+  blueprint: { n: 'Blueprint', font: 'mono', fg: '#eaf3ff', muted: '#a7c6ee', accent: '#ffd166', glow: 'rgba(255,209,102,.35)', track: 'rgba(255,255,255,.2)', edge: 'rgba(255,255,255,.25)',
+    bg: 'linear-gradient(rgba(255,255,255,.13) 1px, transparent 1px) 0 0/22px 22px, linear-gradient(90deg, rgba(255,255,255,.13) 1px, transparent 1px) 0 0/22px 22px, #15427f' },
+  sunset: { n: 'Sunset Stripes', font: 'round', fg: '#fff7f0', muted: '#ffd9c7', accent: '#ffe08a', glow: 'rgba(255,224,138,.4)', track: 'rgba(255,255,255,.2)', edge: 'rgba(255,255,255,.22)',
+    bg: 'repeating-linear-gradient(-45deg, rgba(255,255,255,.09) 0 10px, transparent 10px 20px), linear-gradient(160deg,#ff7e5f,#b8325f 60%,#3b1f5e)' },
+  neon: { n: 'Neon Waves', font: 'cond', fg: '#fff1fb', muted: '#e5a8dc', accent: '#2dffe6', glow: 'rgba(45,255,230,.45)', track: 'rgba(255,255,255,.14)', edge: 'rgba(255,255,255,.16)',
+    bg: 'repeating-radial-gradient(circle at 0 100%, transparent 0 14px, rgba(255,0,200,.20) 14px 16px), repeating-radial-gradient(circle at 100% 0, transparent 0 14px, rgba(0,255,230,.17) 14px 16px), #0a0614' },
+  synth: { n: 'Synthwave Grid', font: 'cond', fg: '#fff0fb', muted: '#e9a9e0', accent: '#ff4fd8', glow: 'rgba(255,79,216,.55)', track: 'rgba(255,255,255,.16)', edge: 'rgba(255,79,216,.4)',
+    bg: 'linear-gradient(transparent 60%, rgba(255,79,216,.35) 61%, transparent 62%) 0 0/100% 18px, linear-gradient(90deg, transparent 49%, rgba(255,79,216,.25) 50%, transparent 51%) 0 0/20px 100%, linear-gradient(180deg,#2a0b4d,#10031f 70%)' },
+  lavender: { n: 'Lavender Mesh', font: 'round', fg: '#fdf9ff', muted: '#d9c9f5', accent: '#ffd6f5', glow: 'rgba(255,214,245,.4)', track: 'rgba(255,255,255,.22)', edge: 'rgba(255,255,255,.28)',
+    bg: 'radial-gradient(55% 55% at 20% 20%, #a78bfa, transparent), radial-gradient(60% 60% at 85% 35%, #f0abfc, transparent), radial-gradient(70% 60% at 40% 100%, #60a5fa, transparent), #4c3a8f' },
+  ember: { n: 'Ember', font: 'cond', fg: '#fff3e6', muted: '#e8b894', accent: '#ff8a3d', glow: 'rgba(255,138,61,.5)', track: 'rgba(255,255,255,.12)', edge: 'rgba(255,160,90,.25)',
+    bg: 'radial-gradient(80% 60% at 50% 115%, rgba(255,110,30,.65), transparent), repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 2px, transparent 2px 8px), #1a0d08' },
+  ocean: { n: 'Ocean Ripples', font: 'round', fg: '#effcff', muted: '#a6dbe8', accent: '#7ff0ff', glow: 'rgba(127,240,255,.45)', track: 'rgba(255,255,255,.16)', edge: 'rgba(255,255,255,.2)',
+    bg: 'repeating-radial-gradient(circle at 50% 130%, rgba(255,255,255,.07) 0 10px, transparent 10px 22px), linear-gradient(180deg,#1a6fa8,#0a2f5c)' },
+  topo: { n: 'Topo Forest', font: 'mono', fg: '#eaf6ee', muted: '#9fc7ae', accent: '#d9f99d', glow: 'rgba(217,249,157,.35)', track: 'rgba(255,255,255,.14)', edge: 'rgba(255,255,255,.16)',
+    bg: 'repeating-radial-gradient(ellipse at 30% 40%, transparent 0 12px, rgba(217,249,157,.14) 12px 13px), repeating-radial-gradient(ellipse at 80% 85%, transparent 0 16px, rgba(217,249,157,.10) 16px 17px), linear-gradient(160deg,#1c3b2d,#0d1f17)' },
+  terminal: { n: 'Terminal', font: 'mono', fg: '#9dff9d', muted: '#4fbf6a', accent: '#3dff7a', glow: 'rgba(61,255,122,.5)', track: 'rgba(61,255,122,.16)', edge: 'rgba(61,255,122,.4)',
+    bg: 'repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 2px, transparent 2px 4px), radial-gradient(120% 90% at 50% 0%, #0f2a15, #030a05)' },
+  carbon: { n: 'Carbon', font: 'cond', fg: '#f2f2f2', muted: '#9a9a9a', accent: '#ffffff', glow: 'rgba(255,255,255,.25)', track: 'rgba(255,255,255,.13)', edge: 'rgba(255,255,255,.14)',
+    bg: 'repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 3px, transparent 3px 6px), #161616' },
+  paper: { n: 'Paper', lt: 1, font: 'serif', fg: '#2b2622', muted: '#7d7167', accent: '#d9532b', glow: 'rgba(217,83,43,.18)', track: 'rgba(0,0,0,.1)', edge: 'rgba(0,0,0,.1)',
+    bg: 'radial-gradient(rgba(0,0,0,.07) 1px, transparent 1.3px) 0 0/10px 10px, #f6f1e7' },
+  cream: { n: 'Cream Serif', lt: 1, font: 'serif', fg: '#3a3226', muted: '#8c7f6b', accent: '#b5482a', glow: 'rgba(0,0,0,0)', track: 'rgba(58,50,38,.12)', edge: 'rgba(58,50,38,.14)',
+    bg: '#f3ecdd' },
+  sakura: { n: 'Sakura', lt: 1, font: 'round', fg: '#5a2a3a', muted: '#a8647c', accent: '#e0457b', glow: 'rgba(224,69,123,.25)', track: 'rgba(90,42,58,.12)', edge: 'rgba(255,255,255,.75)',
+    bg: 'radial-gradient(circle at 20% 25%, rgba(255,255,255,.75) 0 10px, transparent 11px), radial-gradient(circle at 78% 70%, rgba(255,255,255,.6) 0 14px, transparent 15px), radial-gradient(circle at 60% 18%, rgba(255,255,255,.5) 0 7px, transparent 8px), linear-gradient(150deg,#ffd9e6,#ffb3cf)' },
+  mint: { n: 'Mint Lines', lt: 1, font: 'round', fg: '#17433a', muted: '#4f8a7c', accent: '#12a58a', glow: 'rgba(18,165,138,.2)', track: 'rgba(23,67,58,.12)', edge: 'rgba(255,255,255,.7)',
+    bg: 'repeating-linear-gradient(60deg, rgba(255,255,255,.35) 0 2px, transparent 2px 14px), linear-gradient(160deg,#d8fbef,#a9ecd9)' },
+  checker: { n: 'Checker', lt: 1, font: 'sans', fg: '#1d2a44', muted: '#5f6f8f', accent: '#e8505b', glow: 'rgba(232,80,91,.2)', track: 'rgba(29,42,68,.12)', edge: 'rgba(29,42,68,.15)',
+    bg: 'conic-gradient(rgba(29,42,68,.07) 25%, transparent 0 50%, rgba(29,42,68,.07) 0 75%, transparent 0) 0 0/28px 28px, #f7f3ea' },
+  ink: { n: 'Halftone Ink', lt: 1, font: 'cond', fg: '#111111', muted: '#555555', accent: '#111111', glow: 'rgba(0,0,0,0)', track: 'rgba(0,0,0,.14)', edge: 'rgba(0,0,0,.35)',
+    bg: 'radial-gradient(rgba(0,0,0,.16) 1.6px, transparent 2px) 0 0/9px 9px, #fafafa' }
+};
+const PRESETS = ['Exam', 'Birthday', 'Trip', 'Deadline', 'Festival', 'Launch', 'Result', 'Wedding'];
+
+/* ================= STATE ================= */
+const $ = (id) => document.getElementById(id);
+const pad = (n) => String(n).padStart(2, '0');
+const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const pd = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const plusDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d); };
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const uid = () => Math.random().toString(36).slice(2, 8);
+
+const KEY = 'daywidget2', POSKEY = 'daywidget2pos';
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const defaultEvents = () => [{ id: uid(), title: 'Exam', date: plusDays(5), start: ymd(new Date()) }];
+let mem = null; /* fallback if localStorage is unavailable */
+function load() {
+  const s = { events: defaultEvents(), active: 0, shape: 'square', dayStyle: 'ring', clockStyle: 'digital', theme: 'midnight', scale: 0.65, pin: true, login: false, h24: false };
+  let raw = null; try { raw = localStorage.getItem(KEY); } catch {} if (raw === null) raw = mem;
+  try { Object.assign(s, JSON.parse(raw || '{}')); } catch {}
+  if (!Array.isArray(s.events) || !s.events.length) s.events = defaultEvents();
+  if (!(s.active >= 0 && s.active < s.events.length)) s.active = 0;
+  if (!SHAPES[s.shape]) s.shape = 'square';
+  s.scale = clamp(+s.scale || 0.65, 0.35, 1.6);
+  return s;
+}
+let S = load();
+const save = () => { mem = JSON.stringify(S); try { localStorage.setItem(KEY, mem); } catch {} };
+const loadPos = () => { try { const p = JSON.parse(localStorage.getItem(POSKEY) || 'null'); return Array.isArray(p) ? p : [null, null]; } catch { return [null, null]; } };
+const savePos = (p) => { if (!p) return; try { localStorage.setItem(POSKEY, JSON.stringify(p)); } catch {} };
+/* every change = reload latest -> modify -> save (so the widget and the settings window never overwrite each other) */
+function update(fn) { S = load(); fn(S); save(); }
+
+/* ================= DATA ================= */
+function dayData() {
+  const e = S.events[S.active], now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = pd(e.date), start = pd(e.start || ymd(today));
+  const diff = Math.round((target - today) / 864e5), abs = Math.abs(diff);
+  const total = Math.max(1, Math.round((target - start) / 864e5));
+  const elapsed = Math.min(total, Math.max(0, Math.round((today - start) / 864e5)));
+  const ms = Math.abs(target - now);
+  return { e, now, diff, abs, target, total, elapsed, p: diff <= 0 ? 1 : elapsed / total,
+    big: diff === 0 ? '🎉' : abs, unit: diff === 0 ? 'today' : (abs === 1 ? 'day' : 'days') + (diff < 0 ? ' ago' : ''),
+    ms, dd: Math.floor(ms / 864e5), hh: Math.floor(ms % 864e5 / 36e5), mm: Math.floor(ms % 36e5 / 6e4), ss: Math.floor(ms % 6e4 / 1e3) };
+}
+const numCls = (D) => D.diff === 0 ? 'em' : (D.abs >= 1000 ? 'sm' : '');
+const togo = (D) => D.diff > 0 ? (D.abs === 1 ? 'day' : 'days') + ' to go' : D.unit; /* "5 days to go" / "today" / "3 days ago" */
+const big3 = (D) => D.diff === 0 ? 'em' : (D.abs >= 100 ? 'sm' : '');
+const subText = (D) => D.target.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) + (D.diff > 7 ? '  ·  ' + Math.floor(D.diff / 7) + ' wk' : '');
+const meta = (D, t = true) => `<div class="meta">${t ? `<div class="title">${esc(D.e.title)}</div>` : ''}<div class="sub">${subText(D)}</div></div>`;
+const pager = () => S.events.length < 2 ? '' : `<div class="pager">${S.events.map((_, i) => `<i data-i="${i}" class="${i === S.active ? 'on' : ''}"></i>`).join('')}</div>`;
+
+/* ================= DAY STYLES (front) ================= */
+const DAY = {
+  togo: (D) => `${meta(D, false)}<div class="body"><div class="num ${numCls(D)}">${D.big}</div><div class="unit">${togo(D)}</div><div class="chipT">${esc(D.e.title)}</div></div>`,
+  split: (D) => `${meta(D, false)}<div class="body sp"><div class="num xl ${D.abs >= 100 || D.diff === 0 ? 'md' : ''}">${D.big}</div><div class="spR"><div class="spA">${D.diff > 0 ? (D.abs === 1 ? 'day' : 'days') + '<br>to go' : D.diff === 0 ? 'today' : 'days<br>ago'}</div><div class="spT">${esc(D.e.title)}</div></div></div>`,
+  ticket: (D) => `${meta(D, false)}<div class="body tk"><div class="tkT">${esc(D.e.title)}</div><div class="tkLine"></div><div class="row1"><span class="num md ${D.diff === 0 ? 'em' : ''}">${D.big}</span><span class="unit">${togo(D)}</span></div></div>`,
+  stamp: (D) => `${meta(D, false)}<div class="body"><div class="stamp"><div class="stT">${esc(D.e.title)}</div><div class="stN">${D.big}</div><div class="stU">${togo(D)}</div></div></div>`,
+  poster: (D) => `${meta(D, false)}<div class="body ps"><div class="num ghost ${D.diff === 0 ? 'em' : (D.abs >= 100 ? 'md' : '')}">${D.big}</div><div class="psU">${togo(D)}</div><div class="psT">${esc(D.e.title)}</div></div>`,
+  ring: (D) => `${meta(D)}<svg class="ring" viewBox="0 0 214 214"><circle class="track" cx="107" cy="107" r="100"/><circle class="prog" cx="107" cy="107" r="100" stroke-dasharray="628.3" stroke-dashoffset="${628.3 * (1 - D.p)}" transform="rotate(-90 107 107)"/></svg>
+    <div class="body"><div class="num ${numCls(D)}">${D.big}</div><div class="unit">${D.unit}</div></div>`,
+  flip: (D) => `${meta(D)}<div class="body"><div class="fl">${String(D.abs).padStart(2, '0').split('').map(c => `<b class="fd">${c}</b>`).join('')}</div><div class="unit">${D.unit}</div></div>`,
+  minimal: (D) => `${meta(D)}<div class="body"><div class="num xl ${D.diff === 0 ? 'em' : ''}">${D.big}</div><div class="unit">${D.unit}</div></div>`,
+  dots: (D) => {
+    const sh = SHAPES[S.shape], N = Math.min(D.total, 60), filled = Math.min(N, Math.round(N * D.p));
+    const cols = Math.max(5, Math.ceil(Math.sqrt(N * (sh.w / sh.h) * .9))), rows = Math.ceil(N / cols);
+    const wpx = Math.min(sh.w * (S.shape === 'circle' || S.shape === 'arch' ? .52 : .62), sh.h * .44 * cols / rows);
+    let d = ''; for (let k = 0; k < N; k++) d += `<i class="${k < filled ? 'on' : (k === filled && D.diff > 0 ? 'now' : '')}"></i>`;
+    return `${meta(D)}<div class="body"><div class="row1"><span class="num md ${D.diff === 0 ? 'em' : ''}">${D.big}</span><span class="unit">${D.unit}</span></div><div class="dg" style="width:${wpx}px;grid-template-columns:repeat(${cols},1fr)">${d}</div></div>`;
+  },
+  bar: (D) => { const on = Math.round(20 * D.p); let s = ''; for (let k = 0; k < 20; k++) s += `<i class="${k < on ? 'on' : ''}"></i>`;
+    const hrs = Math.floor(D.ms / 36e5);
+    return `${meta(D)}<div class="body"><div class="row1"><span class="num md ${D.diff === 0 ? 'em' : ''}">${D.big}</span><span class="unit">${D.unit}</span></div><div class="seg">${s}</div><div class="live">${D.diff === 0 ? 'happening today' : hrs + 'h ' + pad(D.mm) + 'm ' + pad(D.ss) + 's ' + (D.diff > 0 ? 'left' : 'ago')}</div></div>`; },
+  detail: (D) => `${meta(D)}<div class="body"><div class="dxs">${[['d', D.dd], ['h', D.hh], ['m', D.mm], ['s', D.ss]].map(([l, v]) => `<div class="dx"><b>${pad(v)}</b><span>${l === 'd' ? 'days' : l === 'h' ? 'hrs' : l === 'm' ? 'min' : 'sec'}</span></div>`).join('')}</div><div class="unit">${D.diff >= 0 ? 'to go' : 'since'}</div></div>`,
+  sentence: (D) => `${meta(D, false)}<div class="body sn"><div class="sl">${D.diff > 0 ? 'in' : D.diff < 0 ? '' : 'it is'}</div><div class="num lg ${D.diff === 0 ? 'em' : ''}">${D.big}</div><div class="sw">${D.unit}</div><div class="sl">${D.diff > 0 ? 'until' : D.diff < 0 ? 'since' : ''}</div><div class="st">${esc(D.e.title)}</div></div>`
+};
+
+/* ================= CLOCK STYLES (back) ================= */
+function clockParts() {
+  const n = new Date(); let h = n.getHours(); const m = pad(n.getMinutes()), s = n.getSeconds(); let ap = '';
+  if (!S.h24) { ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; }
+  return { n, h: S.h24 ? pad(h) : String(h), h2: pad(h), m, s, ap, wd: n.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' }) };
+}
+const backSub = (D) => `<div class="meta"><div class="sub">${D.diff > 0 ? D.abs + 'd to ' + esc(D.e.title) : D.diff === 0 ? esc(D.e.title) + ' · today' : esc(D.e.title) + ' · ' + D.abs + 'd ago'}</div></div>`;
+const BACK = {
+  digital: (D, c) => `${backSub(D)}<div class="body"><div class="time">${c.h}:${c.m}<small>${c.ap}</small></div><div class="date">${c.wd}</div></div>`,
+  flip: (D, c) => `${backSub(D)}<div class="body"><div class="fl">${c.h2.split('').map(x => `<b class="fd">${x}</b>`).join('')}<span class="colon">:</span>${c.m.split('').map(x => `<b class="fd">${x}</b>`).join('')}${c.ap ? `<small>${c.ap}</small>` : ''}</div><div class="date">${c.wd}</div></div>`,
+  stacked: (D, c) => `${backSub(D)}<div class="body"><div class="stk"><span>${c.h2}</span><span>${c.m}</span></div></div>`,
+  analog: (D, c) => {
+    const n = c.n, hd = ((n.getHours() % 12) + n.getMinutes() / 60) * 30, md = (n.getMinutes() + n.getSeconds() / 60) * 6, sd = n.getSeconds() * 6;
+    let t = ''; for (let i = 0; i < 60; i++) { const l = i % 5 ? 3 : 8; t += `<line class="tk${i % 5 ? '' : ' b'}" x1="0" y1="-92" x2="0" y2="${-92 + l}" transform="rotate(${i * 6})"/>`; }
+    return `${backSub(D)}<svg class="analog" viewBox="-100 -100 200 200"><circle class="rim" r="97"/>${t}
+      <line class="hh" x1="0" y1="6" x2="0" y2="-48" transform="rotate(${hd})"/><line class="mh" x1="0" y1="8" x2="0" y2="-72" transform="rotate(${md})"/>
+      <line class="sh" x1="0" y1="14" x2="0" y2="-80" transform="rotate(${sd})"/><circle class="cd" r="5"/></svg>`; },
+  arcs: (D, c) => {
+    const n = c.n, hp = ((n.getHours() % 12) + n.getMinutes() / 60) / 12, mp = (n.getMinutes() + n.getSeconds() / 60) / 60, sp = n.getSeconds() / 60;
+    const ring = (r, p, col) => { const C = 2 * Math.PI * r; return `<circle class="t" cx="110" cy="110" r="${r}"/><circle cx="110" cy="110" r="${r}" stroke="${col}" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - p)}" transform="rotate(-90 110 110)"/>`; };
+    return `${backSub(D)}<svg class="arcs" viewBox="0 0 220 220">${ring(100, hp, 'var(--accent)')}${ring(82, mp, 'var(--fg)')}${ring(64, sp, 'var(--muted)')}
+      <text x="110" y="120" text-anchor="middle" font-size="34">${c.h}:${c.m}</text>${c.ap ? `<text x="110" y="142" text-anchor="middle" font-size="12" style="fill:var(--accent)">${c.ap}</text>` : ''}</svg>`; }
+};
+
+/* ================= RENDER ================= */
+function applyTheme() {
+  const t = THEMES[S.theme] || THEMES.midnight, r = document.documentElement.style;
+  r.setProperty('--bg', t.bg); r.setProperty('--fg', t.fg); r.setProperty('--muted', t.muted); r.setProperty('--accent', t.accent);
+  r.setProperty('--glow', t.glow); r.setProperty('--track', t.track); r.setProperty('--edge', t.edge); r.setProperty('--font', F[t.font] || F.sans);
+  r.setProperty('--box', t.lt ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.28)'); r.setProperty('--box2', t.lt ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.38)');
+  r.setProperty('--line', t.lt ? 'rgba(0,0,0,.18)' : 'rgba(0,0,0,.45)');
+}
+const PADOF = (s) => Math.ceil(24 * s) + 2; /* transparent margin that holds the card's shadow */
+const winSize = () => { const sh = SHAPES[S.shape], p = PADOF(S.scale); return { w: Math.round(sh.w * S.scale + 2 * p), h: Math.round(sh.h * S.scale + 2 * p) }; };
+function applyShape() {
+  const sh = SHAPES[S.shape], sc = $('scene').style;
+  sc.width = sh.w + 'px'; sc.height = sh.h + 'px'; sc.zoom = S.scale;
+  sc.setProperty('--w', sh.w + 'px'); sc.setProperty('--h', sh.h + 'px'); sc.setProperty('--m', Math.min(sh.w, sh.h) + 'px'); sc.setProperty('--u', sh.u); sc.setProperty('--r', sh.r); sc.setProperty('--z', S.scale);
+  document.documentElement.style.setProperty('--pad', PADOF(S.scale) + 'px');
+  $('scene').className = 'sh-' + S.shape;
+}
+function renderFront() {
+  const D = dayData(); let st = S.dayStyle;
+  if (S.shape === 'pill' && !['detail', 'flip', 'minimal', 'split'].includes(st)) st = 'minimal';
+  $('front').className = 'face front s-' + S.shape;
+  $('front').innerHTML = DAY[st](D) + pager();
+}
+function renderBack() {
+  const D = dayData(); let st = S.clockStyle;
+  if (S.shape === 'pill' && !['digital', 'flip'].includes(st)) st = 'digital';
+  $('back').className = 'face back s-' + S.shape;
+  $('back').innerHTML = BACK[st](D, clockParts()) + pager();
+}
+
+/* ================= STATE CHANGES ================= */
+const card = $('card'), grip = $('grip'), panel = $('panel');
+let tap = null, lastWheel = 0, prev = null, timer = null, panelOpen = false;
+const isFlipped = () => card.classList.contains('flipped');
+/* commit = apply a change; refresh = also redraw the settings panel */
+function commit(fn, refresh = true) {
+  update(fn);
+  if (MODE === 'settings') { if (refresh) syncPanel(); return; }
+  applyState(); if (refresh && panelOpen) syncPanel();
+}
+function applyState() {
+  applyTheme(); applyShape(); renderFront(); renderBack();
+  if (prev) {
+    if (prev.dayStyle !== S.dayStyle) card.classList.remove('flipped'); else if (prev.clockStyle !== S.clockStyle) card.classList.add('flipped');
+    if (TAURI) {
+      if (prev.shape !== S.shape || prev.scale !== S.scale) { const z = winSize(); widget.setSize(z.w, z.h, true); }
+      if (prev.pin !== S.pin) widget.setPin(S.pin);
+      if (prev.login !== S.login) widget.setLogin(S.login);
+    }
+  }
+  prev = { shape: S.shape, scale: S.scale, pin: S.pin, login: S.login, dayStyle: S.dayStyle, clockStyle: S.clockStyle };
+  schedule();
+}
+function setFlip(v) { card.classList.toggle('flipped', v); renderFront(); renderBack(); schedule(); }
+window.addEventListener('storage', (e) => { /* the other window changed something */
+  if (e.key !== KEY) return; S = load();
+  if (MODE === 'settings') syncPanel(); else applyState();
+});
+
+/* ================= INTERACTION: tap = flip, drag = move, wheel = next event, Ctrl+wheel / corner = resize ================= */
+document.addEventListener('mousedown', (e) => {
+  if (MODE !== 'main' || e.button !== 0 || !e.target.closest('#card')) return;
+  const i = e.target.dataset && e.target.dataset.i;
+  if (i !== undefined) { commit((s) => { s.active = +i; }); return; }
+  tap = { sx: e.screenX, sy: e.screenY, moved: false, raf: 0 };
+  widget.dragStart();
+});
+document.addEventListener('mousemove', (e) => {
+  if (!tap) return;
+  if (!tap.moved && Math.hypot(e.screenX - tap.sx, e.screenY - tap.sy) < 5) return;
+  tap.moved = true;
+  if (!tap.raf) tap.raf = requestAnimationFrame(() => { if (tap) { tap.raf = 0; widget.dragMove(); } });
+});
+document.addEventListener('mouseup', () => {
+  if (!tap) return; const t = tap; tap = null;
+  if (!t.moved) setFlip(!isFlipped()); else widget.dragEnd().then(savePos);
+});
+card.addEventListener('wheel', (e) => {
+  if (e.ctrlKey) { e.preventDefault(); commit((s) => { s.scale = clamp(+(s.scale * (e.deltaY < 0 ? 1.06 : 1 / 1.06)).toFixed(3), 0.35, 1.6); }); return; }
+  const n = S.events.length; if (n < 2 || Date.now() - lastWheel < 250) return; lastWheel = Date.now();
+  commit((s) => { s.active = (s.active + (e.deltaY > 0 ? 1 : -1) + n) % n; });
+}, { passive: false });
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault(); /* no browser zoom */
+  if (e.key === 'Escape') { if (MODE === 'settings') widget.closeSettings(); else togglePanel(false); }
+});
+document.addEventListener('contextmenu', (e) => { e.preventDefault(); if (MODE === 'main' && e.target.closest('#card')) openSettings(); });
+$('gear').onclick = () => openSettings();
+function openSettings() {
+  if (!TAURI) { togglePanel(true); return; }
+  const d = window.devicePixelRatio || 1, sc = window.screen; /* usable screen area (no taskbar) in physical px */
+  widget.openSettings(Math.round((sc.availLeft || 0) * d), Math.round((sc.availTop || 0) * d), Math.round(sc.availWidth * d), Math.round(sc.availHeight * d));
+}
+
+/* corner grip: live resize (window follows the cursor), saved on release */
+let gd = null;
+function liveScale(s) { S.scale = s; if (prev) prev.scale = s; applyShape(); const z = winSize(); widget.setSize(z.w, z.h, false); }
+grip.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); e.stopPropagation(); grip.setPointerCapture(e.pointerId);
+  const sh = SHAPES[S.shape], p = PADOF(S.scale);
+  gd = { ox: p + sh.w * S.scale - e.clientX, oy: p + sh.h * S.scale - e.clientY, s: S.scale, raf: 0 };
+});
+grip.addEventListener('pointermove', (e) => {
+  if (!gd) return; const sh = SHAPES[S.shape];
+  const xe = e.clientX + gd.ox, ye = e.clientY + gd.oy;
+  gd.s = +clamp(((xe - 3) / (sh.w + 24) + (ye - 3) / (sh.h + 24)) / 2, 0.35, 1.6).toFixed(3);
+  if (!gd.raf) gd.raf = requestAnimationFrame(() => { if (gd) { gd.raf = 0; liveScale(gd.s); } });
+});
+const endGrip = () => { if (!gd) return; const s = gd.s; gd = null; commit((st) => { st.scale = s; }); };
+grip.addEventListener('pointerup', endGrip); grip.addEventListener('pointercancel', endGrip);
+
+/* ================= SETTINGS PANEL (own window in the app, inline in the browser preview) ================= */
+const typing = () => { const a = document.activeElement; return !!a && a.tagName === 'INPUT' && (a.type === 'text' || a.type === 'date'); };
+function togglePanel(v) { panelOpen = v; panel.classList.toggle('open', v); if (v) syncPanel(); }
+function buildEvList() {
+  $('evList').innerHTML = S.events.map((e, i) => `<div class="ev ${i === S.active ? 'sel' : ''}" data-i="${i}"><input type="radio" name="evr" ${i === S.active ? 'checked' : ''}>
+    <input class="t" type="text" maxlength="24" value="${esc(e.title)}"><input class="d" type="date" value="${e.date}"><span class="del" title="Delete">✕</span></div>`).join('');
+}
+function chips(id, obj, key, getName) {
+  $(id).innerHTML = Object.keys(obj).map(k => `<span class="chip ${S[key] === k ? 'sel' : ''}" data-k="${k}">${getName(obj[k])}</span>`).join('');
+}
+function syncPanel() {
+  if (!panel.firstChild) return;
+  if (!typing()) buildEvList();
+  chips('shapeC', SHAPES, 'shape', (o) => o.n); chips('dayC', DAYSTYLES, 'dayStyle', (o) => o); chips('clockC', CLOCKS, 'clockStyle', (o) => o);
+  $('themeG').innerHTML = Object.keys(THEMES).map(k => `<div class="sw2 ${S.theme === k ? 'sel' : ''}" data-k="${k}" title="${THEMES[k].n}" style="background:${THEMES[k].bg}"></div>`).join('');
+  if (document.activeElement !== $('szR')) $('szR').value = Math.round(S.scale * 100);
+  $('szv').textContent = '· ' + Math.round(S.scale * 100) + '%';
+  $('cPin').checked = S.pin; $('cLogin').checked = S.login; $('c24').checked = S.h24;
+}
+if (MODE === 'settings' || !TAURI) {
+  panel.innerHTML = `<div class="ph"><b>Customize</b><span class="x" id="pX">✕</span></div>
+  <div class="pbody">
+  <div class="sec">Events <small>· scroll over the widget to switch</small></div><div id="evList"></div>
+  <div class="chips" id="presets">${PRESETS.map(p => `<span class="chip add" data-p="${p}">+ ${p}</span>`).join('')}</div>
+  <div class="sec">Size <small id="szv"></small> <small>· or drag the corner / Ctrl+scroll</small></div><input type="range" id="szR" min="35" max="160" step="1">
+  <div class="sec">Shape</div><div class="chips" id="shapeC"></div>
+  <div class="sec">Days style</div><div class="chips" id="dayC"></div>
+  <div class="sec">Clock style <small>· tap the widget to see it</small></div><div class="chips" id="clockC"></div>
+  <div class="sec">Theme</div><div class="tg" id="themeG"></div>
+  <div class="tog"><label><input type="checkbox" id="cPin"> Stick to desktop (stays visible on Win+D)</label><label><input type="checkbox" id="cLogin"> Start with Windows</label><label><input type="checkbox" id="c24"> 24-hour</label></div>
+  </div>
+  <div class="pb"><button class="primary" id="bDone">Done</button></div>`;
+
+  const evList = $('evList');
+  evList.addEventListener('input', (e) => {
+    const row = e.target.closest('.ev'); if (!row) return; const i = +row.dataset.i;
+    if (e.target.classList.contains('t')) commit((s) => { if (s.events[i]) s.events[i].title = e.target.value; }, false);
+    else if (e.target.classList.contains('d') && e.target.value) commit((s) => { if (s.events[i]) { s.events[i].date = e.target.value; s.events[i].start = ymd(new Date()); } }, false);
+  });
+  evList.addEventListener('focusin', (e) => {
+    const row = e.target.closest('.ev'); if (!row) return; const i = +row.dataset.i;
+    if (i !== S.active) { commit((s) => { s.active = i; }, false); evList.querySelectorAll('.ev').forEach((r, k) => r.classList.toggle('sel', k === i)); }
+  });
+  evList.addEventListener('click', (e) => {
+    const row = e.target.closest('.ev'); if (!row) return; const i = +row.dataset.i;
+    if (e.target.classList.contains('del')) commit((s) => { if (s.events.length > 1) { s.events.splice(i, 1); s.active = Math.min(s.active, s.events.length - 1); } });
+    else if (e.target.type === 'radio') commit((s) => { s.active = i; });
+  });
+  $('presets').addEventListener('click', (e) => { const p = e.target.dataset.p; if (!p) return;
+    commit((s) => { s.events.push({ id: uid(), title: p, date: plusDays(30), start: ymd(new Date()) }); s.active = s.events.length - 1; }); });
+  const pick = (id, key) => $(id).addEventListener('click', (e) => { const k = e.target.dataset.k; if (k) commit((s) => { s[key] = k; }); });
+  pick('shapeC', 'shape'); pick('dayC', 'dayStyle'); pick('clockC', 'clockStyle'); pick('themeG', 'theme');
+  $('szR').addEventListener('input', (e) => { const v = +e.target.value / 100; $('szv').textContent = '· ' + e.target.value + '%'; commit((s) => { s.scale = v; }, false); });
+  $('cPin').onchange = (e) => commit((s) => { s.pin = e.target.checked; }, false);
+  $('cLogin').onchange = (e) => commit((s) => { s.login = e.target.checked; }, false);
+  $('c24').onchange = (e) => commit((s) => { s.h24 = e.target.checked; }, false);
+  $('bDone').onclick = $('pX').onclick = () => { if (MODE === 'settings') widget.closeSettings(); else togglePanel(false); };
+}
+
+/* ================= LOW-POWER SCHEDULER =================
+   Redraw only what is visible, only as often as it changes: every second for live-seconds styles
+   (analog / rings / D·H·M·S / bar), otherwise once a minute. Nothing runs while hidden. */
+function tick() { if (document.hidden) return; if (isFlipped()) renderBack(); else renderFront(); schedule(); }
+function schedule() {
+  clearTimeout(timer); if (document.hidden || MODE !== 'main') return;
+  const sec = isFlipped() ? ['analog', 'arcs'].includes(S.clockStyle) : ['detail', 'bar'].includes(S.dayStyle);
+  const now = Date.now();
+  timer = setTimeout(tick, sec ? 1000 - now % 1000 + 5 : 60000 - now % 60000 + 50);
+}
+document.addEventListener('visibilitychange', () => { if (MODE !== 'main') return; if (document.hidden) clearTimeout(timer); else { renderFront(); renderBack(); schedule(); } });
+
+/* ================= BOOT ================= */
+async function bootMain() {
+  document.body.className = TAURI ? 'app' : 'web';
+  applyTheme(); applyShape(); renderFront(); renderBack();
+  if (TAURI) {
+    try { const z = winSize(), p = loadPos(); savePos(await widget.init(p[0], p[1], z.w, z.h, S.pin)); }
+    catch (err) { try { await widget.forceShow(); } catch {} }
+    if (TG.event) TG.event.listen('tray', (ev) => {
+      if (ev.payload === 'open') openSettings();
+      else if (ev.payload === 'pin') commit((s) => { s.pin = !s.pin; });
+      else if (ev.payload === 'reset') widget.resetPos().then(savePos);
+    });
+  }
+  prev = { shape: S.shape, scale: S.scale, pin: S.pin, login: S.login, dayStyle: S.dayStyle, clockStyle: S.clockStyle };
+  schedule();
+}
+function bootSettings() {
+  document.body.className = 'smode'; panel.classList.add('open'); syncPanel();
+  let had = false; window.addEventListener('focus', () => { had = true; });
+  setTimeout(() => { if (document.hasFocus()) had = true; }, 300);
+  window.addEventListener('blur', () => { /* click anywhere else = close (changes are already saved) */
+    if (!had) return; setTimeout(() => { if (!document.hasFocus()) widget.closeSettings(); }, 200); });
+  window.focus();
+}
+if (MODE === 'settings') bootSettings(); else bootMain();
+</script>
+</body>
+</html>
